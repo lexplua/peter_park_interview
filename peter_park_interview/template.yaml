@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  peter_park_interview
+
+  Sample SAM Template for peter_park_interview
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+    MemorySize: 128
+
+Resources:
+  OCRFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: hello_world/
+      Handler: text_ocr.handler
+      Runtime: python3.9
+      Events:
+        NewEndpoint:
+          Type: Api
+          Properties:
+            Path: /ocr
+            Method: POST
+      Role: !GetAtt OCRAccess.Arn
+
+  OCRAccess:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: RekognitionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rekognition:DetectText
+                  # Add other Rekognition actions as needed
+                Resource: "*"
+
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name:
+        Fn::Sub: ApplicationInsights-SAM-${AWS::StackName}
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  OCRApi:
+    Description: API Gateway endpoint URL for Prod stage for OCR World function
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/ocr/"
+  OCRFunction:
+    Description: OCR World Lambda Function ARN
+    Value: !GetAtt OCRFunction.Arn
+  OCRFunctionIamRole:
+    Description: Implicit IAM Role created for OCR function
+    Value: !GetAtt OCRAccess.Arn
